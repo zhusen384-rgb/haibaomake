@@ -94,13 +94,103 @@ export default function App() {
     if (posterRef.current) {
       const canvas = await html2canvas(posterRef.current, {
         useCORS: true,
-        scale: 2,
+        scale: 3, // Increased scale for higher quality
+        backgroundColor: null,
       });
       const link = document.createElement('a');
       link.download = `poster-${Date.now()}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     }
+  };
+
+  const getGridCols = (total: number) => {
+    if (total <= 1) return 1;
+    if (total === 2 || total === 4) return 2;
+    return 3;
+  };
+
+  const renderItems = () => {
+    if (items.length === 0) {
+      return (
+        <div className="col-span-full flex flex-col items-center justify-center text-stone-300 py-20">
+          <ImageIcon size={48} className="animate-pulse" />
+          <p className="mt-2 text-sm font-bold">请添加商品</p>
+        </div>
+      );
+    }
+
+    return items.map((item) => {
+      return (
+        <div 
+          key={item.id} 
+          className="w-full"
+        >
+          {/* Style-specific Item Content */}
+          {posterStyle === 'supermarket' && (
+            <div className="bg-white rounded-xl overflow-hidden flex flex-col shadow-sm border-2 border-red-500 group relative">
+              <div className="aspect-square relative overflow-hidden">
+                <img src={item.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
+              </div>
+              <div className="p-2 flex flex-col items-center gap-1 bg-[#FFFBEB]">
+                <p className="text-[11px] font-black text-red-700 leading-tight line-clamp-1 text-center">
+                  {item.name || '精选优选'}
+                </p>
+                <div className="bg-yellow-400 text-red-700 px-3 py-0.5 rounded-full font-black flex items-baseline gap-0.5">
+                  <span className="text-[10px]">¥</span>
+                  <span className="text-lg leading-none">{item.price || '0'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {posterStyle === 'classic' && (
+            <div className="flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-100 group relative">
+              <div className="aspect-square relative overflow-hidden bg-white">
+                <img src={item.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
+              </div>
+              <div className="p-2 text-center flex flex-col gap-1 bg-blue-50/50">
+                <h4 className="text-[11px] font-bold text-blue-900 truncate">{item.name || '生活美学'}</h4>
+                <div className="text-blue-700 font-black flex items-baseline justify-center gap-0.5">
+                  <span className="text-[10px]">¥</span>
+                  <span className="text-lg leading-none">{item.price || '0'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {posterStyle === 'festive' && (
+            <div className="bg-[#8B0000] rounded-xl overflow-hidden border-2 border-yellow-500 flex flex-col items-center text-center shadow-md group relative">
+              <div className="w-full aspect-square relative overflow-hidden">
+                <img src={item.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
+              </div>
+              <div className="w-full p-2 flex flex-col items-center gap-1 bg-yellow-500/5">
+                <p className="text-[10px] font-bold text-yellow-100 truncate">{item.name || '福礼'}</p>
+                <div className="bg-yellow-400 text-red-900 px-3 py-0.5 rounded-full font-black flex items-baseline gap-0.5">
+                  <span className="text-[10px]">¥</span>
+                  <span className="text-xl leading-none">{item.price || '0'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {posterStyle === 'fresh' && (
+            <div className="flex flex-col group relative rounded-2xl overflow-hidden border-2 border-green-500 bg-white">
+              <div className="aspect-square relative overflow-hidden bg-white">
+                <img src={item.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
+              </div>
+              <div className="p-2 flex flex-col items-center gap-1">
+                <p className="text-[11px] font-bold text-green-800 truncate text-center">{item.name || '生鲜'}</p>
+                <div className="text-green-600 font-black flex items-baseline gap-0.5">
+                  <span className="text-[10px]">¥</span>
+                  <span className="text-lg leading-none">{item.price || '0'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    });
   };
 
   const handleGenerateSlogan = async () => {
@@ -284,176 +374,162 @@ export default function App() {
                   </div>
                 </div>
                 
-                <div className="bg-stone-200 p-8 rounded-[2rem] shadow-inner flex justify-center">
+                <div className="bg-stone-300 p-6 sm:p-10 rounded-[3rem] shadow-2xl flex justify-center overflow-hidden relative">
+                  {/* Decorative background elements */}
+                  <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                    <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl" />
+                    <div className="absolute bottom-10 right-10 w-40 h-40 bg-orange-500 rounded-full blur-3xl" />
+                  </div>
+
                   <div 
                     ref={posterRef}
                     className={cn(
-                      "w-[320px] min-h-[450px] bg-white shadow-2xl overflow-hidden relative flex flex-col",
-                      posterStyle === 'classic' && "p-4 bg-white",
-                      posterStyle === 'festive' && "p-0 bg-red-700",
-                      posterStyle === 'fresh' && "p-0 bg-green-50",
-                      posterStyle === 'supermarket' && "p-0 bg-yellow-50"
+                      "w-[340px] min-h-[480px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden relative flex flex-col transition-all duration-500",
+                      posterStyle === 'classic' && "bg-white",
+                      posterStyle === 'festive' && "bg-[#991B1B]",
+                      posterStyle === 'fresh' && "bg-[#F0FDF4]",
+                      posterStyle === 'supermarket' && "bg-[#FEF9C3]"
                     )}
                   >
+                    {/* Common Texture Overlay */}
+                    <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')] z-50" />
+                    
                     {/* Supermarket Style (Elderly Friendly) */}
                     {posterStyle === 'supermarket' && (
-                      <div className="h-full flex flex-col">
-                        <div className="bg-red-600 text-white p-4 text-center border-b-4 border-yellow-400 shadow-md">
-                          <h2 className="text-3xl font-black tracking-widest mb-1">今日特价</h2>
-                          <p className="text-xs font-bold opacity-90 tracking-widest">新鲜 · 便宜 · 实惠</p>
+                      <div className="h-full flex flex-col bg-[#FEF9C3]">
+                        <div className="bg-red-600 text-white p-5 text-center border-b-[6px] border-yellow-400 shadow-lg relative overflow-hidden">
+                          <h2 className="text-4xl font-black tracking-tighter mb-1 drop-shadow-md">今日特价</h2>
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="h-[2px] w-8 bg-yellow-400" />
+                            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-200">Fresh & Quality</p>
+                            <div className="h-[2px] w-8 bg-yellow-400" />
+                          </div>
                         </div>
                         
                         <div className={cn(
-                          "flex-1 p-2 flex flex-wrap gap-2 justify-center content-start",
+                          "flex-1 p-4 grid gap-3 content-start overflow-y-auto custom-scrollbar relative",
+                          getGridCols(items.length) === 1 ? "grid-cols-1" : 
+                          getGridCols(items.length) === 2 ? "grid-cols-2" : "grid-cols-3"
                         )}>
-                          {items.length > 0 ? (
-                            items.map((item) => (
-                              <div key={item.id} className={cn(
-                                "bg-white border-2 border-red-100 rounded-lg overflow-hidden flex flex-col shadow-sm",
-                                items.length <= 1 ? "w-full" : 
-                                items.length <= 4 ? "w-[calc(50%-4px)]" : 
-                                items.length <= 9 ? "w-[calc(33.33%-6px)]" : 
-                                "w-[calc(25%-6px)]"
-                              )}>
-                                <div className="aspect-square bg-stone-50 relative">
-                                  <img src={item.url} className="w-full h-full object-cover" />
-                                  {item.price && (
-                                    <div className="absolute top-0 right-0 bg-red-600 text-white px-1.5 py-0.5 text-[10px] font-black rounded-bl-lg">
-                                      特价
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="p-1.5 flex flex-col justify-between flex-1">
-                                  <p className="text-[11px] font-bold text-stone-800 leading-tight line-clamp-2 mb-1">
-                                    {item.name || '特惠商品'}
-                                  </p>
-                                  <div className="flex items-baseline gap-0.5">
-                                    <span className="text-[10px] font-black text-red-600">¥</span>
-                                    <span className="text-lg font-black text-red-600 leading-none">
-                                      {item.price || '0'}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="col-span-full flex flex-col items-center justify-center text-stone-300 py-20">
-                              <ImageIcon size={48} />
-                              <p className="mt-2 text-sm font-bold">请添加商品</p>
-                            </div>
-                          )}
+                          {renderItems()}
                         </div>
                         
-                        <div className="bg-red-600 text-white py-2 px-4 flex justify-between items-center">
-                          <span className="text-[10px] font-bold">早市直供 · 产地直发</span>
-                          <div className="flex gap-1">
-                            <div className="w-3 h-3 bg-yellow-400 rounded-full" />
-                            <div className="w-3 h-3 bg-white rounded-full" />
+                        <div className="bg-red-600 text-white py-3 px-5 flex justify-between items-center border-t-2 border-yellow-400/30">
+                          <div className="flex flex-col">
+                            <span className="text-[11px] font-black tracking-wider">早市直供 · 产地直发</span>
+                            <span className="text-[8px] opacity-70">新鲜品质 每天为您留好货</span>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <div className="w-4 h-4 bg-yellow-400 rounded-full shadow-inner" />
+                            <div className="w-4 h-4 bg-orange-100 rounded-full shadow-inner" />
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Classic Style (Clear & Large Font) */}
+                    {/* Classic Style (Compact Grid) */}
                     {posterStyle === 'classic' && (
-                      <div className="h-full flex flex-col border-4 border-stone-800 p-2">
-                        <div className="text-center py-4 border-b-2 border-stone-800 mb-4">
-                          <h2 className="text-4xl font-black text-stone-900">商品价目表</h2>
-                          <p className="text-sm font-bold text-stone-500 mt-1 tracking-[0.2em]">品质生活 · 放心选购</p>
-                        </div>
-                        <div className={cn(
-                          "flex-1 flex flex-wrap gap-4 justify-center content-start",
-                        )}>
-                          {items.map((item) => (
-                            <div key={item.id} className={cn(
-                              "flex gap-3 items-center p-2 border-b border-stone-100",
-                              items.length <= 2 ? "w-full" : "w-[calc(50%-8px)]"
-                            )}>
-                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-stone-50 flex-shrink-0 border border-stone-200">
-                                <img src={item.url} className="w-full h-full object-cover" />
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-black text-stone-900 leading-tight">{item.name || '商品名称'}</p>
-                                <p className="text-xl font-black text-red-600 mt-1">¥{item.price || '0'}</p>
-                              </div>
+                      <div className="h-full flex flex-col bg-white">
+                        <div className="p-6 pb-4 bg-blue-600 text-white relative overflow-hidden">
+                          {/* Decorative elements */}
+                          <div className="absolute top-0 right-0 w-32 h-full bg-blue-700 skew-x-12 translate-x-16" />
+                          
+                          <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-4 h-[1px] bg-blue-200" />
+                              <span className="text-[9px] font-black tracking-[0.3em] uppercase text-blue-200">Premium Selection</span>
                             </div>
-                          ))}
+                            <h2 className="text-3xl font-black tracking-tight">今日特惠清单</h2>
+                            <p className="text-[10px] font-medium opacity-80 mt-1 italic">Quality you can trust, prices you'll love</p>
+                          </div>
                         </div>
-                        <div className="mt-4 pt-2 border-t-2 border-stone-800 text-center">
-                          <p className="text-[10px] font-bold text-stone-400">价格以店内实际为准</p>
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Festive Style (Traditional Red) */}
-                    {posterStyle === 'festive' && (
-                      <div className="h-full flex flex-col">
-                        <div className="bg-yellow-400 text-red-700 p-4 text-center relative overflow-hidden">
-                          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-                            <div className="grid grid-cols-4 gap-4 p-2">
-                              {Array.from({ length: 16 }).map((_, i) => (
-                                <div key={i} className="w-4 h-4 border-2 border-red-700 rounded-full" />
-                              ))}
-                            </div>
-                          </div>
-                          <h2 className="text-3xl font-black tracking-widest relative z-10">大红大紫 · 惠民</h2>
-                          <p className="text-xs font-bold mt-1 relative z-10">全场惊喜价 · 错过等一年</p>
-                        </div>
                         <div className={cn(
-                          "flex-1 p-3 flex flex-wrap gap-3 justify-center content-start",
+                          "flex-1 p-4 grid gap-3 content-start overflow-y-auto custom-scrollbar relative",
+                          getGridCols(items.length) === 1 ? "grid-cols-1" : 
+                          getGridCols(items.length) === 2 ? "grid-cols-2" : "grid-cols-3"
                         )}>
-                          {items.map((item) => (
-                            <div key={item.id} className={cn(
-                              "bg-red-800 rounded-xl p-1 border-2 border-yellow-400 flex flex-col items-center text-center",
-                              items.length <= 4 ? "w-[calc(50%-6px)]" : "w-[calc(33.33%-8px)]"
-                            )}>
-                              <div className="w-full aspect-square rounded-lg overflow-hidden mb-1 border border-yellow-400/30">
-                                <img src={item.url} className="w-full h-full object-cover" />
-                              </div>
-                              <p className="text-[10px] font-bold text-yellow-100 truncate w-full px-1">{item.name || '商品'}</p>
-                              <p className="text-base font-black text-yellow-400 leading-none mt-1">¥{item.price || '0'}</p>
-                            </div>
-                          ))}
+                          {renderItems()}
+                          {/* Subtle texture */}
+                          <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
                         </div>
-                        <div className="bg-yellow-400 py-1 text-center">
-                          <p className="text-[10px] font-black text-red-700">老百姓自己的放心超市</p>
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Fresh Style (Healthy Green) */}
-                    {posterStyle === 'fresh' && (
-                      <div className="h-full flex flex-col">
-                        <div className="bg-green-600 text-white p-5 flex justify-between items-end">
-                          <div>
-                            <h2 className="text-2xl font-black leading-none">新鲜到家</h2>
-                            <p className="text-[10px] font-bold mt-1 opacity-80 uppercase tracking-widest">Fresh & Healthy</p>
-                          </div>
-                          <div className="w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black">
-                            100%
-                          </div>
-                        </div>
-                        <div className={cn(
-                          "flex-1 p-4 flex flex-wrap gap-4 justify-center content-start",
-                        )}>
-                          {items.map((item) => (
-                            <div key={item.id} className={cn(
-                              "flex flex-col",
-                              items.length <= 4 ? "w-[calc(50%-8px)]" : "w-[calc(33.33%-11px)]"
-                            )}>
-                              <div className="aspect-square rounded-2xl overflow-hidden bg-white shadow-md mb-2 border-2 border-green-100">
-                                <img src={item.url} className="w-full h-full object-cover" />
-                              </div>
-                              <p className="text-[11px] font-bold text-green-900 truncate">{item.name || '生鲜'}</p>
-                              <p className="text-lg font-black text-green-600 leading-none mt-1">¥{item.price || '0'}</p>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="p-4 bg-white border-t border-green-50">
+                        <div className="p-4 py-3 bg-blue-50 flex items-center justify-between border-t border-blue-100">
                           <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500" />
-                            <span className="text-[10px] font-bold text-stone-400">每日清晨采摘 · 部分区域送货上门</span>
+                            <div className="w-2 h-2 rounded-full bg-blue-400" />
+                            <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest tracking-[0.2em]">Authentic Quality</p>
                           </div>
+                          <div className="flex gap-1.5">
+                            <div className="w-1.5 h-1.5 bg-blue-300 rounded-full" />
+                            <div className="w-1.5 h-1.5 bg-blue-200 rounded-full" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Festive Style (Traditional Joy) */}
+                    {posterStyle === 'festive' && (
+                      <div className="h-full flex flex-col relative">
+                        <div className="bg-[#B22222] text-yellow-400 p-6 text-center relative overflow-hidden shadow-lg border-b border-yellow-600/30">
+                          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/exclusive-paper.png')]" />
+                          <h2 className="text-4xl font-black tracking-[0.15em] relative z-10">惠民大集</h2>
+                          <p className="text-[10px] font-bold mt-2 relative z-10 bg-yellow-400 text-[#B22222] inline-block px-4 py-0.5 rounded-full uppercase tracking-widest">Joy & Prosperity</p>
+                        </div>
+                        
+                        <div className={cn(
+                          "flex-1 p-4 grid gap-3 content-start overflow-y-auto custom-scrollbar relative",
+                          getGridCols(items.length) === 1 ? "grid-cols-1" : 
+                          getGridCols(items.length) === 2 ? "grid-cols-2" : "grid-cols-3"
+                        )}>
+                          {renderItems()}
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[100px] font-black text-yellow-400/5 pointer-events-none select-none">
+                            福
+                          </div>
+                        </div>
+                        
+                        <div className="bg-[#B22222] py-3 px-6 flex justify-between items-center border-t border-yellow-600/30">
+                          <p className="text-[10px] font-black text-yellow-500/80 uppercase tracking-widest">Quality Selection</p>
+                          <div className="flex gap-1.5">
+                            {[1, 2, 3].map(i => (
+                              <div key={i} className="w-1.5 h-1.5 bg-yellow-500/40 rounded-full" />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fresh Style (Organic Nature) */}
+                    {posterStyle === 'fresh' && (
+                      <div className="h-full flex flex-col relative">
+                        <div className="bg-green-600 text-white p-6 flex justify-between items-center shadow-md relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                          <div className="relative z-10">
+                            <h2 className="text-3xl font-black leading-none tracking-tight">新鲜到家</h2>
+                            <div className="flex items-center gap-2 mt-2">
+                              <div className="h-[1px] w-4 bg-white/40" />
+                              <p className="text-[9px] font-bold opacity-80 uppercase tracking-[0.2em]">Natural & Healthy</p>
+                            </div>
+                          </div>
+                          <div className="relative z-10 w-12 h-12 rounded-full border border-white/30 flex flex-col items-center justify-center bg-white/10 backdrop-blur-sm">
+                            <span className="text-[8px] font-black leading-none opacity-60">优选</span>
+                            <span className="text-[12px] font-black leading-none mt-0.5">100%</span>
+                          </div>
+                        </div>
+                        
+                        <div className={cn(
+                          "flex-1 p-4 grid gap-3 content-start overflow-y-auto custom-scrollbar relative",
+                          getGridCols(items.length) === 1 ? "grid-cols-1" : 
+                          getGridCols(items.length) === 2 ? "grid-cols-2" : "grid-cols-3"
+                        )}>
+                          {renderItems()}
+                        </div>
+                        
+                        <div className="p-4 bg-green-50/80 backdrop-blur-md border-t border-green-200 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                            <span className="text-[10px] font-bold text-green-800/40 uppercase tracking-widest">Freshness Guaranteed</span>
+                          </div>
+                          <Sparkles size={16} className="text-green-400" />
                         </div>
                       </div>
                     )}
@@ -477,7 +553,7 @@ export default function App() {
                 <p className="text-stone-500 text-lg">
                   {sloganScenario === 'group' 
                     ? "输入商品名称，AI 为您生成亲切、实惠且带表情的社群推送文案。" 
-                    : "输入商品名称，AI 为您生成自然、口语化且易于沟通的日常口述词。"}
+                    : "输入商品名称，AI 为您提供该商品的营养价值、特点及推荐做法。"}
                 </p>
               </section>
 
@@ -504,8 +580,8 @@ export default function App() {
                         : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
                     )}
                   >
-                    <MessageSquareQuote size={18} />
-                    日常口述 (纯文字)
+                    <Sparkles size={18} />
+                    产品百科 (特点/做法)
                   </button>
                 </div>
 
