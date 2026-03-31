@@ -16,7 +16,8 @@ import {
   X,
   RefreshCw,
   Layout,
-  MessageSquareQuote
+  MessageSquareQuote,
+  Trash2
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { generateSlogan } from './services/geminiService';
@@ -128,45 +129,46 @@ export default function App() {
         >
           {/* Style-specific Item Content */}
           {posterStyle === 'supermarket' && (
-            <div className="bg-white rounded-xl overflow-hidden flex flex-col shadow-sm border-2 border-red-500 group relative">
-              <div className="aspect-square relative overflow-hidden">
+            <div className="bg-white rounded-xl overflow-hidden flex flex-col shadow-[0_4px_12px_rgba(220,38,38,0.15)] border-2 border-red-500 group relative">
+              <div className="aspect-square relative overflow-hidden bg-stone-50">
                 <img src={item.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
+                {/* Price tag overlapping image */}
+                <div className="absolute bottom-2 right-2 bg-yellow-400 text-red-700 px-2.5 py-0.5 rounded-lg font-black flex items-baseline gap-0.5 shadow-md border border-yellow-300 transform rotate-[-2deg]">
+                  <span className="text-[10px]">¥</span>
+                  <span className="text-xl leading-none">{item.price || '0'}</span>
+                </div>
               </div>
-              <div className="p-2 flex flex-col items-center gap-1 bg-[#FFFBEB]">
-                <p className="text-[11px] font-black text-red-700 leading-tight line-clamp-1 text-center">
+              <div className="p-2.5 flex flex-col items-center gap-1 bg-white">
+                <p className="text-[12px] font-black text-stone-800 leading-tight line-clamp-1 text-center w-full">
                   {item.name || '精选优选'}
                 </p>
-                <div className="bg-yellow-400 text-red-700 px-3 py-0.5 rounded-full font-black flex items-baseline gap-0.5">
-                  <span className="text-[10px]">¥</span>
-                  <span className="text-lg leading-none">{item.price || '0'}</span>
-                </div>
               </div>
             </div>
           )}
 
           {posterStyle === 'classic' && (
-            <div className="flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-100 group relative">
-              <div className="aspect-square relative overflow-hidden bg-white">
+            <div className="flex flex-col bg-white rounded-3xl overflow-hidden shadow-[0_8px_24px_-6px_rgba(37,99,235,0.12)] border border-blue-50 group relative">
+              <div className="aspect-square relative overflow-hidden bg-slate-50">
                 <img src={item.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
               </div>
-              <div className="p-2 text-center flex flex-col gap-1 bg-blue-50/50">
-                <h4 className="text-[11px] font-bold text-blue-900 truncate">{item.name || '生活美学'}</h4>
-                <div className="text-blue-700 font-black flex items-baseline justify-center gap-0.5">
+              <div className="p-3 text-center flex flex-col gap-1 bg-white">
+                <h4 className="text-[12px] font-bold text-slate-700 truncate">{item.name || '生活美学'}</h4>
+                <div className="text-blue-600 font-black flex items-baseline justify-center gap-0.5">
                   <span className="text-[10px]">¥</span>
-                  <span className="text-lg leading-none">{item.price || '0'}</span>
+                  <span className="text-xl leading-none">{item.price || '0'}</span>
                 </div>
               </div>
             </div>
           )}
 
           {posterStyle === 'festive' && (
-            <div className="bg-[#8B0000] rounded-xl overflow-hidden border-2 border-yellow-500 flex flex-col items-center text-center shadow-md group relative">
-              <div className="w-full aspect-square relative overflow-hidden">
+            <div className="bg-gradient-to-b from-red-800 to-red-950 rounded-2xl overflow-hidden border border-yellow-500/40 flex flex-col items-center text-center shadow-lg group relative p-1">
+              <div className="w-full aspect-square relative overflow-hidden rounded-xl border border-yellow-500/20 bg-red-900/50">
                 <img src={item.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
               </div>
-              <div className="w-full p-2 flex flex-col items-center gap-1 bg-yellow-500/5">
-                <p className="text-[10px] font-bold text-yellow-100 truncate">{item.name || '福礼'}</p>
-                <div className="bg-yellow-400 text-red-900 px-3 py-0.5 rounded-full font-black flex items-baseline gap-0.5">
+              <div className="w-full p-2.5 flex flex-col items-center gap-1">
+                <p className="text-[11px] font-bold text-yellow-100 truncate w-full">{item.name || '福礼'}</p>
+                <div className="text-yellow-400 font-black flex items-baseline gap-0.5">
                   <span className="text-[10px]">¥</span>
                   <span className="text-xl leading-none">{item.price || '0'}</span>
                 </div>
@@ -175,13 +177,13 @@ export default function App() {
           )}
 
           {posterStyle === 'fresh' && (
-            <div className="flex flex-col group relative rounded-2xl overflow-hidden border-2 border-green-500 bg-white">
-              <div className="aspect-square relative overflow-hidden bg-white">
+            <div className="flex flex-col group relative rounded-t-3xl rounded-b-xl overflow-hidden border border-emerald-100 bg-white shadow-[0_8px_24px_-6px_rgba(16,185,129,0.12)]">
+              <div className="aspect-square relative overflow-hidden bg-emerald-50/50">
                 <img src={item.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
               </div>
-              <div className="p-2 flex flex-col items-center gap-1">
-                <p className="text-[11px] font-bold text-green-800 truncate text-center">{item.name || '生鲜'}</p>
-                <div className="text-green-600 font-black flex items-baseline gap-0.5">
+              <div className="p-3 flex flex-col items-center gap-1.5 bg-white">
+                <p className="text-[12px] font-bold text-emerald-900 truncate text-center w-full">{item.name || '生鲜'}</p>
+                <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg font-black flex items-baseline gap-0.5">
                   <span className="text-[10px]">¥</span>
                   <span className="text-lg leading-none">{item.price || '0'}</span>
                 </div>
@@ -260,7 +262,18 @@ export default function App() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <label className="text-sm font-semibold text-stone-700">商品列表 (最多20个)</label>
-                      <span className="text-xs text-stone-400">{items.length}/20</span>
+                      <div className="flex items-center gap-3">
+                        {items.length > 0 && (
+                          <button
+                            onClick={() => setItems([])}
+                            className="text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                            一键清除
+                          </button>
+                        )}
+                        <span className="text-xs text-stone-400">{items.length}/20</span>
+                      </div>
                     </div>
                     
                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -396,8 +409,10 @@ export default function App() {
                     
                     {/* Supermarket Style (Elderly Friendly) */}
                     {posterStyle === 'supermarket' && (
-                      <div className="h-full flex flex-col bg-[#FEF9C3]">
-                        <div className="bg-red-600 text-white p-5 text-center border-b-[6px] border-yellow-400 shadow-lg relative overflow-hidden">
+                      <div className="h-full flex flex-col bg-[#FEF9C3] relative">
+                        {/* Subtle dot pattern background */}
+                        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ef4444 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
+                        <div className="bg-red-600 text-white p-5 text-center border-b-[6px] border-yellow-400 shadow-lg relative overflow-hidden z-10">
                           <h2 className="text-4xl font-black tracking-tighter mb-1 drop-shadow-md">今日特价</h2>
                           <div className="flex items-center justify-center gap-2">
                             <div className="h-[2px] w-8 bg-yellow-400" />
@@ -429,8 +444,8 @@ export default function App() {
 
                     {/* Classic Style (Compact Grid) */}
                     {posterStyle === 'classic' && (
-                      <div className="h-full flex flex-col bg-white">
-                        <div className="p-6 pb-4 bg-blue-600 text-white relative overflow-hidden">
+                      <div className="h-full flex flex-col bg-gradient-to-b from-slate-50 to-blue-50/30">
+                        <div className="p-6 pb-4 bg-blue-700 text-white relative overflow-hidden shadow-md">
                           {/* Decorative elements */}
                           <div className="absolute top-0 right-0 w-32 h-full bg-blue-700 skew-x-12 translate-x-16" />
                           
@@ -439,7 +454,7 @@ export default function App() {
                               <div className="w-4 h-[1px] bg-blue-200" />
                               <span className="text-[9px] font-black tracking-[0.3em] uppercase text-blue-200">Premium Selection</span>
                             </div>
-                            <h2 className="text-3xl font-black tracking-tight">今日特惠清单</h2>
+                            <h2 className="text-3xl font-black tracking-tight">特惠清单</h2>
                             <p className="text-[10px] font-medium opacity-80 mt-1 italic">Quality you can trust, prices you'll love</p>
                           </div>
                         </div>
@@ -469,8 +484,8 @@ export default function App() {
 
                     {/* Festive Style (Traditional Joy) */}
                     {posterStyle === 'festive' && (
-                      <div className="h-full flex flex-col relative">
-                        <div className="bg-[#B22222] text-yellow-400 p-6 text-center relative overflow-hidden shadow-lg border-b border-yellow-600/30">
+                      <div className="h-full flex flex-col relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-800 to-red-950">
+                        <div className="bg-[#991B1B] text-yellow-400 p-6 text-center relative overflow-hidden shadow-lg border-b border-yellow-600/30">
                           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/exclusive-paper.png')]" />
                           <h2 className="text-4xl font-black tracking-[0.15em] relative z-10">惠民大集</h2>
                           <p className="text-[10px] font-bold mt-2 relative z-10 bg-yellow-400 text-[#B22222] inline-block px-4 py-0.5 rounded-full uppercase tracking-widest">Joy & Prosperity</p>
@@ -500,8 +515,8 @@ export default function App() {
 
                     {/* Fresh Style (Organic Nature) */}
                     {posterStyle === 'fresh' && (
-                      <div className="h-full flex flex-col relative">
-                        <div className="bg-green-600 text-white p-6 flex justify-between items-center shadow-md relative overflow-hidden">
+                      <div className="h-full flex flex-col relative bg-gradient-to-br from-emerald-50 to-green-100/50">
+                        <div className="bg-emerald-600 text-white p-6 flex justify-between items-center shadow-md relative overflow-hidden">
                           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
                           <div className="relative z-10">
                             <h2 className="text-3xl font-black leading-none tracking-tight">新鲜到家</h2>
