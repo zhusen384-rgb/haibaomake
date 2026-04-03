@@ -31,3 +31,31 @@ export async function generateSlogan(itemName: string, scenario: 'group' | 'oral
     return "文案生成出错，请检查网络或配置。";
   }
 }
+
+export async function recognizeProduct(base64Image: string): Promise<string> {
+  const prompt = `你是一个超市导购专家。
+请识别这张图片中的【主要商品名称】。
+要求：
+1. 直接返回商品名称，不要有任何多余的解释。
+2. 名称要简洁易懂，适合放在海报上，例如“红富士苹果”、“洁净洗衣粉”。
+3. 如果无法识别，请返回“未知商品”。`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: base64Image.split(',')[1] || base64Image
+          }
+        }
+      ],
+    });
+    return response.text?.trim() || "未知商品";
+  } catch (error) {
+    console.error("Error recognizing product:", error);
+    return "识别失败";
+  }
+}

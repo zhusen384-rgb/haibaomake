@@ -17,10 +17,14 @@ import {
   RefreshCw,
   Layout,
   MessageSquareQuote,
-  Trash2
+  Trash2,
+  Mic,
+  MicOff,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { generateSlogan } from './services/geminiService';
+import { generateSlogan, recognizeProduct } from './services/geminiService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -28,6 +32,61 @@ import { twMerge } from 'tailwind-merge';
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+// Voice Input Component
+const VoiceInputButton = ({ onResult, className, size = 16 }: { onResult: (text: string) => void, className?: string, size?: number }) => {
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn('Speech recognition not supported');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'zh-CN';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      onResult(transcript);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  // Only show if supported
+  const isSupported = !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  if (!isSupported) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={toggleListening}
+      className={cn(
+        "p-1.5 rounded-full transition-all flex items-center justify-center",
+        isListening ? "bg-red-100 text-red-500 animate-pulse scale-110" : "text-stone-400 hover:bg-stone-100 hover:text-orange-500",
+        className
+      )}
+      title={isListening ? "正在听...点击停止" : "点击语音输入"}
+    >
+      {isListening ? <MicOff size={size} /> : <Mic size={size} />}
+    </button>
+  );
+};
 
 type Tab = 'poster' | 'slogan';
 
@@ -44,8 +103,10 @@ export default function App() {
   const [sloganInput, setSloganInput] = useState('');
   const [slogan, setSlogan] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRecognizing, setIsRecognizing] = useState(false);
   const posterRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Poster Generator State
   const [posterStyle, setPosterStyle] = useState<'supermarket' | 'classic' | 'festive' | 'fresh'>('supermarket');
@@ -91,6 +152,42 @@ export default function App() {
     setItems(prev => prev.filter(item => item.id !== id));
   };
 
+  const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Image = reader.result as string;
+        const id = Math.random().toString(36).substr(2, 9);
+        
+        // Add item immediately with loading state
+        setItems(prev => {
+          if (prev.length >= 20) return prev;
+          return [...prev, {
+            id,
+            url: base64Image,
+            name: '正在识别商品...',
+            price: ''
+          }];
+        });
+
+        setIsRecognizing(true);
+        try {
+          const recognizedName = await recognizeProduct(base64Image);
+          setItems(prev => prev.map(item => item.id === id ? { ...item, name: recognizedName } : item));
+        } catch (error) {
+          console.error("Recognition failed:", error);
+          setItems(prev => prev.map(item => item.id === id ? { ...item, name: '' } : item));
+        } finally {
+          setIsRecognizing(false);
+          // Clear input so same file can be picked again
+          if (cameraInputRef.current) cameraInputRef.current.value = '';
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const downloadPoster = async () => {
     if (posterRef.current) {
       const canvas = await html2canvas(posterRef.current, {
@@ -133,9 +230,14 @@ export default function App() {
               <div className="aspect-square relative overflow-hidden bg-stone-50">
                 <img src={item.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
                 {/* Price tag overlapping image */}
-                <div className="absolute bottom-2 right-2 bg-yellow-400 text-red-700 px-2.5 py-0.5 rounded-lg font-black flex items-baseline gap-0.5 shadow-md border border-yellow-300 transform rotate-[-2deg]">
-                  <span className="text-[10px]">¥</span>
-                  <span className="text-xl leading-none">{item.price || '0'}</span>
+                <div className="absolute bottom-0.5 right-0.5 bg-yellow-400 text-red-700 px-1.5 py-0.5 rounded-md font-black flex items-baseline gap-0.5 shadow-sm border border-yellow-300 transform rotate-[-2deg] whitespace-nowrap scale-90 origin-bottom-right">
+                  <span className="text-[7px] font-bold">¥</span>
+                  <span className={cn(
+                    "leading-none tracking-tighter",
+                    (item.price || '0').length > 4 ? "text-xs" : "text-sm"
+                  )}>
+                    {item.price || '0'}
+                  </span>
                 </div>
               </div>
               <div className="p-2.5 flex flex-col items-center gap-1 bg-white">
@@ -153,9 +255,14 @@ export default function App() {
               </div>
               <div className="p-3 text-center flex flex-col gap-1 bg-white">
                 <h4 className="text-[12px] font-bold text-slate-700 truncate">{item.name || '生活美学'}</h4>
-                <div className="text-blue-600 font-black flex items-baseline justify-center gap-0.5">
-                  <span className="text-[10px]">¥</span>
-                  <span className="text-xl leading-none">{item.price || '0'}</span>
+                <div className="text-blue-600 font-black flex items-baseline justify-center gap-0.5 whitespace-nowrap">
+                  <span className="text-[10px] font-bold">¥</span>
+                  <span className={cn(
+                    "leading-none tracking-tighter",
+                    (item.price || '0').length > 4 ? "text-base" : "text-lg"
+                  )}>
+                    {item.price || '0'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -168,9 +275,14 @@ export default function App() {
               </div>
               <div className="w-full p-2.5 flex flex-col items-center gap-1">
                 <p className="text-[11px] font-bold text-yellow-100 truncate w-full">{item.name || '福礼'}</p>
-                <div className="text-yellow-400 font-black flex items-baseline gap-0.5">
-                  <span className="text-[10px]">¥</span>
-                  <span className="text-xl leading-none">{item.price || '0'}</span>
+                <div className="text-yellow-400 font-black flex items-baseline gap-0.5 whitespace-nowrap">
+                  <span className="text-[10px] font-bold">¥</span>
+                  <span className={cn(
+                    "leading-none tracking-tighter",
+                    (item.price || '0').length > 4 ? "text-base" : "text-lg"
+                  )}>
+                    {item.price || '0'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -183,9 +295,14 @@ export default function App() {
               </div>
               <div className="p-3 flex flex-col items-center gap-1.5 bg-white">
                 <p className="text-[12px] font-bold text-emerald-900 truncate text-center w-full">{item.name || '生鲜'}</p>
-                <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg font-black flex items-baseline gap-0.5">
-                  <span className="text-[10px]">¥</span>
-                  <span className="text-lg leading-none">{item.price || '0'}</span>
+                <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg font-black flex items-baseline gap-0.5 whitespace-nowrap">
+                  <span className="text-[10px] font-bold">¥</span>
+                  <span className={cn(
+                    "leading-none tracking-tighter",
+                    (item.price || '0').length > 4 ? "text-sm" : "text-base"
+                  )}>
+                    {item.price || '0'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -207,14 +324,14 @@ export default function App() {
     <div className="min-h-screen bg-[#F5F5F4] text-[#1C1917] font-sans selection:bg-orange-200">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white">
+            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white flex-shrink-0">
               <Sparkles size={20} />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">智能海报助手</h1>
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight truncate">智能海报助手</h1>
           </div>
-          <nav className="flex gap-1 bg-stone-100 p-1 rounded-full">
+          <nav className="flex gap-1 bg-stone-100 p-1 rounded-full scale-90 sm:scale-100 origin-right">
             <button
               onClick={() => setActiveTab('poster')}
               className={cn(
@@ -237,7 +354,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <AnimatePresence mode="wait">
           {activeTab === 'poster' ? (
             <motion.div
@@ -245,16 +362,16 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="grid lg:grid-cols-2 gap-12 items-start"
+              className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-start"
             >
               {/* Controls */}
-              <div className="space-y-8">
+              <div className="space-y-8 w-full">
                 <section className="space-y-4">
-                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
                     <Layout className="text-orange-500" />
                     海报配置
                   </h2>
-                  <p className="text-stone-500">上传图片并填写信息，我们将为您生成精美的商超海报。</p>
+                  <p className="text-stone-500 text-sm sm:text-base">上传图片并填写信息，我们将为您生成精美的商超海报。</p>
                 </section>
 
                 <div className="space-y-6">
@@ -284,18 +401,18 @@ export default function App() {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
-                            className="bg-white p-4 rounded-2xl border border-stone-200 shadow-sm space-y-4 relative group"
+                            className="bg-white p-3 sm:p-4 rounded-2xl border border-stone-200 shadow-sm space-y-3 sm:space-y-4 relative group"
                           >
                             <button 
                               onClick={() => removeItem(item.id)}
-                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity z-10"
                             >
                               <X size={14} />
                             </button>
                             
-                            <div className="flex gap-4">
-                              <div className="w-20 h-20 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
-                                <img src={item.url} className="w-full h-full object-cover" />
+                            <div className="flex gap-3 sm:gap-4">
+                              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
+                                <img src={item.url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               </div>
                               <div className="flex-1 grid grid-cols-1 gap-3">
                                 <div className="relative">
@@ -305,8 +422,21 @@ export default function App() {
                                     value={item.name}
                                     onChange={(e) => updateItem(item.id, 'name', e.target.value)}
                                     placeholder="商品名称"
-                                    className="w-full pl-9 pr-3 py-2 bg-stone-50 border border-stone-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500/20 transition-all"
+                                    className={cn(
+                                      "w-full pl-9 pr-10 py-2 bg-stone-50 border border-stone-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500/20 transition-all",
+                                      item.name === '正在识别商品...' && "text-stone-400 italic"
+                                    )}
                                   />
+                                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                    {item.name === '正在识别商品...' ? (
+                                      <Loader2 size={14} className="animate-spin text-orange-500 mr-2" />
+                                    ) : (
+                                      <VoiceInputButton 
+                                        onResult={(text) => updateItem(item.id, 'name', text)} 
+                                        size={14}
+                                      />
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="relative">
                                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={14} />
@@ -325,13 +455,22 @@ export default function App() {
                       </AnimatePresence>
                       
                       {items.length < 20 && (
-                        <button 
-                          onClick={() => fileInputRef.current?.click()}
-                          className="w-full py-8 rounded-2xl border-2 border-dashed border-stone-300 bg-white flex flex-col items-center justify-center hover:border-orange-400 hover:bg-orange-50 transition-all group"
-                        >
-                          <Upload className="text-stone-400 group-hover:text-orange-500 transition-colors" size={24} />
-                          <span className="text-sm font-bold text-stone-400 group-hover:text-orange-500 mt-2">批量添加商品图片</span>
-                        </button>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="py-6 rounded-2xl border-2 border-dashed border-stone-300 bg-white flex flex-col items-center justify-center hover:border-orange-400 hover:bg-orange-50 transition-all group"
+                          >
+                            <Upload className="text-stone-400 group-hover:text-orange-500 transition-colors" size={24} />
+                            <span className="text-xs font-bold text-stone-400 group-hover:text-orange-500 mt-2">相册导入</span>
+                          </button>
+                          <button 
+                            onClick={() => cameraInputRef.current?.click()}
+                            className="py-6 rounded-2xl border-2 border-dashed border-stone-300 bg-white flex flex-col items-center justify-center hover:border-orange-400 hover:bg-orange-50 transition-all group"
+                          >
+                            <Camera className="text-stone-400 group-hover:text-orange-500 transition-colors" size={24} />
+                            <span className="text-xs font-bold text-stone-400 group-hover:text-orange-500 mt-2">拍照识别</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                     <input 
@@ -341,6 +480,14 @@ export default function App() {
                       className="hidden" 
                       accept="image/*" 
                       multiple
+                    />
+                    <input 
+                      type="file" 
+                      ref={cameraInputRef} 
+                      onChange={handleCameraCapture} 
+                      className="hidden" 
+                      accept="image/*" 
+                      capture="environment"
                     />
                   </div>
 
@@ -377,9 +524,9 @@ export default function App() {
               </div>
 
               {/* Preview */}
-              <div className="sticky top-28 space-y-4">
+              <div className="lg:sticky lg:top-28 space-y-4 w-full">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400">实时预览</h3>
+                  <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-stone-400">实时预览</h3>
                   <div className="flex gap-1">
                     <div className="w-2 h-2 rounded-full bg-red-400" />
                     <div className="w-2 h-2 rounded-full bg-yellow-400" />
@@ -387,23 +534,24 @@ export default function App() {
                   </div>
                 </div>
                 
-                <div className="bg-stone-300 p-6 sm:p-10 rounded-[3rem] shadow-2xl flex justify-center overflow-hidden relative">
+                <div className="bg-stone-300 p-4 sm:p-10 rounded-[2rem] sm:rounded-[3rem] shadow-2xl flex justify-center overflow-hidden relative min-h-[400px] items-center">
                   {/* Decorative background elements */}
                   <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                     <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl" />
                     <div className="absolute bottom-10 right-10 w-40 h-40 bg-orange-500 rounded-full blur-3xl" />
                   </div>
 
-                  <div 
-                    ref={posterRef}
-                    className={cn(
-                      "w-[340px] min-h-[480px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden relative flex flex-col transition-all duration-500",
-                      posterStyle === 'classic' && "bg-white",
-                      posterStyle === 'festive' && "bg-[#991B1B]",
-                      posterStyle === 'fresh' && "bg-[#F0FDF4]",
-                      posterStyle === 'supermarket' && "bg-[#FEF9C3]"
-                    )}
-                  >
+                  <div className="relative transition-transform duration-300 origin-center scale-[0.75] sm:scale-90 md:scale-100">
+                    <div 
+                      ref={posterRef}
+                      className={cn(
+                        "w-[340px] min-h-[480px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden relative flex flex-col transition-all duration-500",
+                        posterStyle === 'classic' && "bg-white",
+                        posterStyle === 'festive' && "bg-[#991B1B]",
+                        posterStyle === 'fresh' && "bg-[#F0FDF4]",
+                        posterStyle === 'supermarket' && "bg-[#FEF9C3]"
+                      )}
+                    >
                     {/* Common Texture Overlay */}
                     <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')] z-50" />
                     
@@ -551,8 +699,9 @@ export default function App() {
                   </div>
                 </div>
               </div>
-            </motion.div>
-          ) : (
+            </div>
+          </motion.div>
+        ) : (
             <motion.div
               key="slogan"
               initial={{ opacity: 0, y: 20 }}
@@ -561,25 +710,25 @@ export default function App() {
               className="max-w-2xl mx-auto space-y-12"
             >
               <section className="text-center space-y-4">
-                <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                  <MessageSquareQuote size={32} />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-orange-100 text-orange-600 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <MessageSquareQuote size={28} />
                 </div>
-                <h2 className="text-4xl font-bold tracking-tight">文案助手</h2>
-                <p className="text-stone-500 text-lg">
+                <h2 className="text-2xl sm:text-4xl font-bold tracking-tight">文案助手</h2>
+                <p className="text-stone-500 text-sm sm:text-lg px-4">
                   {sloganScenario === 'group' 
                     ? "输入商品名称，AI 为您生成亲切、实惠且带表情的社群推送文案。" 
                     : "输入商品名称，AI 为您提供该商品的营养价值、特点及推荐做法。"}
                 </p>
               </section>
 
-              <div className="space-y-6">
-                <div className="flex justify-center gap-4">
+              <div className="space-y-6 px-4 sm:px-0">
+                <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
                   <button
                     onClick={() => setSloganScenario('group')}
                     className={cn(
-                      "px-8 py-3 rounded-2xl text-sm font-bold transition-all flex items-center gap-2",
+                      "flex-1 px-6 sm:px-8 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2",
                       sloganScenario === 'group' 
-                        ? "bg-orange-500 text-white shadow-xl shadow-orange-200 scale-105" 
+                        ? "bg-orange-500 text-white shadow-xl shadow-orange-200 scale-[1.02] sm:scale-105" 
                         : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
                     )}
                   >
@@ -589,9 +738,9 @@ export default function App() {
                   <button
                     onClick={() => setSloganScenario('oral')}
                     className={cn(
-                      "px-8 py-3 rounded-2xl text-sm font-bold transition-all flex items-center gap-2",
+                      "flex-1 px-6 sm:px-8 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2",
                       sloganScenario === 'oral' 
-                        ? "bg-orange-500 text-white shadow-xl shadow-orange-200 scale-105" 
+                        ? "bg-orange-500 text-white shadow-xl shadow-orange-200 scale-[1.02] sm:scale-105" 
                         : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
                     )}
                   >
@@ -600,18 +749,27 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={sloganInput}
-                    onChange={(e) => setSloganInput(e.target.value)}
-                    placeholder="输入商品，如：新鲜草莓、洁净肥皂..."
-                    className="w-full px-6 py-5 bg-white border border-stone-200 rounded-[2rem] text-lg focus:ring-4 focus:ring-orange-100 focus:border-orange-500 outline-none transition-all shadow-sm"
-                  />
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={sloganInput}
+                      onChange={(e) => setSloganInput(e.target.value)}
+                      placeholder="输入商品，如：新鲜草莓、洁净肥皂..."
+                      className="w-full pl-6 pr-14 py-4 sm:py-5 bg-white border border-stone-200 rounded-2xl sm:rounded-[2rem] text-base sm:text-lg focus:ring-4 focus:ring-orange-100 focus:border-orange-500 outline-none transition-all shadow-sm"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <VoiceInputButton 
+                        onResult={(text) => setSloganInput(text)} 
+                        size={24}
+                        className="p-2"
+                      />
+                    </div>
+                  </div>
                   <button
                     onClick={handleGenerateSlogan}
                     disabled={!sloganInput || isGenerating}
-                    className="absolute right-2 top-2 bottom-2 px-8 bg-stone-900 text-white rounded-[1.5rem] font-bold hover:bg-stone-800 disabled:opacity-50 transition-all flex items-center gap-2"
+                    className="w-full sm:w-auto px-8 py-4 sm:py-0 bg-stone-900 text-white rounded-2xl sm:rounded-[1.5rem] font-bold hover:bg-stone-800 disabled:opacity-50 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
                   >
                     {isGenerating ? <RefreshCw className="animate-spin" size={20} /> : <Sparkles size={20} />}
                     生成
